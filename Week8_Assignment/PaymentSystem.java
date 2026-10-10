@@ -1,68 +1,75 @@
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
 import java.util.Scanner;
-import java.util.function.Function;
 
-interface PaymentMethod {
-    double adjustedAmount();
-}
+class Payment {
+    double amount;
 
-class CardPayment implements PaymentMethod {
-    private final double amount;
-
-    CardPayment(double amount) {
+    Payment(double amount) {
         this.amount = amount;
     }
 
-    public double adjustedAmount() {
-        return amount * 1.02;
+    double calculateAmount() {
+        return amount;
     }
 }
 
-class WalletPayment implements PaymentMethod {
-    private final double amount;
-
-    WalletPayment(double amount) {
-        this.amount = amount;
+class Card extends Payment {
+    Card(double amount) {
+        super(amount);
     }
 
-    public double adjustedAmount() {
-        return amount * 1.01;
+    double calculateAmount() {
+        return amount + amount * 0.02;
     }
 }
 
-class BankTransferPayment implements PaymentMethod {
-    private final double amount;
-
-    BankTransferPayment(double amount) {
-        this.amount = amount;
+class Wallet extends Payment {
+    Wallet(double amount) {
+        super(amount);
     }
 
-    public double adjustedAmount() {
+    double calculateAmount() {
+        return amount + amount * 0.01;
+    }
+}
+
+class BankTransfer extends Payment {
+    BankTransfer(double amount) {
+        super(amount);
+    }
+
+    double calculateAmount() {
         return amount;
     }
 }
 
 public class PaymentSystem {
     public static void main(String[] args) {
-        Map<String, Function<Double, PaymentMethod>> paymentMethods = new HashMap<>();
-        paymentMethods.put("CARD", CardPayment::new);
-        paymentMethods.put("WALLET", WalletPayment::new);
-        paymentMethods.put("BANKTRANSFER", BankTransferPayment::new);
+        Scanner sc = new Scanner(System.in);
 
-        Scanner scanner = new Scanner(System.in);
-        int count = Integer.parseInt(scanner.nextLine().trim());
+        int n = sc.nextInt();
         double total = 0;
 
-        for (int i = 0; i < count; i++) {
-            String[] input = scanner.nextLine().trim().split("\\s+");
-            PaymentMethod payment = paymentMethods.get(input[0]).apply(Double.parseDouble(input[1]));
-            double adjustedAmount = payment.adjustedAmount();
-            total += adjustedAmount;
-            System.out.printf(Locale.US, "%s: %.2f%n", input[0], adjustedAmount);
+        for (int i = 0; i < n; i++) {
+            String type = sc.next();
+            double amount = sc.nextDouble();
+
+            Payment p = null;
+
+            if (type.equals("CARD")) {
+                p = new Card(amount);
+            } else if (type.equals("WALLET")) {
+                p = new Wallet(amount);
+            } else if (type.equals("BANKTRANSFER")) {
+                p = new BankTransfer(amount);
+            }
+
+            double result = p.calculateAmount();
+
+            System.out.printf("%s: %.2f%n", type, result);
+            total += result;
         }
 
-        System.out.printf(Locale.US, "Total: %.2f%n", total);
+        System.out.printf("Total: %.2f%n", total);
+        sc.close();
     }
 }

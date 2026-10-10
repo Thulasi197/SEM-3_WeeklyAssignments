@@ -1,90 +1,112 @@
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
 import java.util.Scanner;
-import java.util.function.Function;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
-interface Question {
-    double score();
-}
+class Question {
+    String correctAnswer;
+    String studentAnswer;
+    double points;
 
-class ExactAnswerQuestion implements Question {
-    private final String correctAnswer;
-    private final String studentAnswer;
-    private final double points;
-
-    ExactAnswerQuestion(String correctAnswer, String studentAnswer, double points) {
+    Question(String correctAnswer, String studentAnswer, double points) {
         this.correctAnswer = correctAnswer;
         this.studentAnswer = studentAnswer;
         this.points = points;
     }
 
-    public double score() {
-        return correctAnswer.equals(studentAnswer) ? points : 0;
+    double grade() {
+        return 0;
     }
 }
 
-class EssayQuestion implements Question {
-    private final String keywords;
-    private final String studentAnswer;
-    private final double points;
-
-    EssayQuestion(String keywords, String studentAnswer, double points) {
-        this.keywords = keywords;
-        this.studentAnswer = studentAnswer;
-        this.points = points;
+class MCQ extends Question {
+    MCQ(String correctAnswer, String studentAnswer, double points) {
+        super(correctAnswer, studentAnswer, points);
     }
 
-    public double score() {
-        int matches = 0;
-        String answer = studentAnswer.toLowerCase(Locale.ROOT);
-        for (String keyword : keywords.split(",")) {
-            if (answer.contains(keyword.trim().toLowerCase(Locale.ROOT))) {
-                matches++;
-            }
-        }
-        if (matches >= 2) {
-            return points * 0.75;
-        }
-        if (matches == 1) {
-            return points * 0.50;
+    double grade() {
+        if (studentAnswer.equalsIgnoreCase(correctAnswer)) {
+            return points;
         }
         return 0;
     }
 }
 
-public class ExaminationQuestionGrader {
-    private static String[] tokens(String line) {
-        Matcher matcher = Pattern.compile("\\\"([^\\\"]*)\\\"|(\\S+)").matcher(line);
-        java.util.ArrayList<String> values = new java.util.ArrayList<>();
-        while (matcher.find()) {
-            values.add(matcher.group(1) != null ? matcher.group(1) : matcher.group(2));
-        }
-        return values.toArray(new String[0]);
+class TrueFalse extends Question {
+    TrueFalse(String correctAnswer, String studentAnswer, double points) {
+        super(correctAnswer, studentAnswer, points);
     }
 
-    public static void main(String[] args) {
-        Map<String, Function<String[], Question>> questionTypes = new HashMap<>();
-        questionTypes.put("MCQ", input -> new ExactAnswerQuestion(
-                input[2], input[3], Double.parseDouble(input[4])));
-        questionTypes.put("TF", input -> new ExactAnswerQuestion(
-                input[2], input[3], Double.parseDouble(input[4])));
-        questionTypes.put("ESSAY", input -> new EssayQuestion(
-                input[2], input[3], Double.parseDouble(input[4])));
+    double grade() {
+        if (studentAnswer.equalsIgnoreCase(correctAnswer)) {
+            return points;
+        }
+        return 0;
+    }
+}
 
-        Scanner scanner = new Scanner(System.in);
-        int count = Integer.parseInt(scanner.nextLine().trim());
-        double total = 0;
+class Essay extends Question {
+    Essay(String correctAnswer, String studentAnswer, double points) {
+        super(correctAnswer, studentAnswer, points);
+    }
 
-        for (int i = 0; i < count; i++) {
-            String[] input = tokens(scanner.nextLine());
-            double score = questionTypes.get(input[0]).apply(input).score();
-            total += score;
-            System.out.printf(Locale.US, "%s: %.2f%n", input[0], score);
+    double grade() {
+        String[] keywords = correctAnswer.split(",");
+        int count = 0;
+
+        for (String keyword : keywords) {
+            if (studentAnswer.toLowerCase().contains(keyword.trim().toLowerCase())) {
+                count++;
+            }
         }
 
-        System.out.printf(Locale.US, "Total Score: %.2f%n", total);
+        if (count >= 2) {
+            return points * 0.75;
+        } else if (count == 1) {
+            return points * 0.50;
+        }
+
+        return 0;
+    }
+}
+
+public class ExaminationQuestionGrader {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        int n = Integer.parseInt(sc.nextLine().trim());
+        double total = 0;
+
+        for (int i = 0; i < n; i++) {
+            String line = sc.nextLine();
+            String[] parts = line.split("\\s+", 3);
+
+            String type = parts[0];
+            String correctAnswer = parts[1];
+            String studentAnswer = "";
+            double points = 0;
+
+            if (type.equals("ESSAY")) {
+                int lastSpace = parts[2].lastIndexOf(' ');
+                studentAnswer = parts[2].substring(0, lastSpace);
+                points = Double.parseDouble(parts[2].substring(lastSpace + 1));
+            } else {
+                String[] answerParts = parts[2].split("\\s+");
+                studentAnswer = answerParts[0];
+                points = Double.parseDouble(answerParts[1]);
+            }
+
+            Question q;
+            if (type.equals("MCQ")) {
+                q = new MCQ(correctAnswer, studentAnswer, points);
+            } else if (type.equals("TF")) {
+                q = new TrueFalse(correctAnswer, studentAnswer, points);
+            } else {
+                q = new Essay(correctAnswer, studentAnswer, points);
+            }
+
+            double score = q.grade();
+            System.out.printf("%s: %.2f%n", type, score);
+            total += score;
+        }
+
+        System.out.printf("Total Score: %.2f%n", total);
+        sc.close();
     }
 }
